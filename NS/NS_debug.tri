@@ -1,0 +1,65 @@
+Constants:
+"x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811"
+"x2a8648ce3d030101"
+"xffffffffffffffffffffffff99def836146bc9b1b4d22831"
+
+Reversable functions:
+("EncryptAES192",[("DecryptAES192",0)],3)
+("ModMult",[("ModDiv0",0),("ModDiv1",1)],3)
+
+Unreversable functions:
+("ECMult",3)
+("LengthBE2",1)
+("mFirstHalf",1)
+
+Concatenation functions:
+("Concat",2)
+("Concat",4)
+
+Diffie-Hellmann functions:
+("ECMult",["vCurve","vBasePoint"])
+	
+Private channels:
+([TTP,Ali],1)
+([TTP,Ali],2)
+([TTP,Bob],1)
+([TTP,Bob],2)
+
+
+TTP events:
+
+[Key "ECScalar" "kXAli_ECScalar4",OutPriv 1 TTP Ali "kXAli_ECScalar4"]
+
+[Key "ECScalar" "kXBob_ECScalar5",OutPriv 1 TTP Bob "kXBob_ECScalar5"]
+
+[Assign False "vCurve" "x2a8648ce3d030101",Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811",Calc False "f8" "ECMult" ["vCurve","vBasePoint","kXAli_ECScalar4"],OutPubl "f8"]
+
+[Calc False "f9" "ECMult" ["vCurve","vBasePoint","kXBob_ECScalar5"],OutPubl "f9"]
+
+[OutPriv 2 TTP Ali "f9"]
+
+[OutPriv 2 TTP Bob "f8"]
+
+
+Ali events:
+
+[InPriv 1 TTP Ali False "kXAli_ECScalar4"]
+
+[InPubl False "f9"]
+
+[Key "Nonce" "kN_Nonce24",Assign False "vCurve" "x2a8648ce3d030101",Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811",Calc False "f10" "ECMult" ["vCurve","vBasePoint","kXAli_ECScalar4"],Calc False "f11" "Concat" ["kN_Nonce24","f10"],Calc False "f12" "Encrypt" ["f11","f9"],OutPubl "f12"]
+
+[InPubl False "f13",Calc False "f14" "Decrypt" ["f13","kXAli_ECScalar4"],Calc False "f15" "mSecondHalf" ["f14"],Calc False "f16" "Encrypt" ["f15","f9"],OutPubl "f16",Calc False "commonKey" "Concat" ["kN_Nonce24","f15"]]
+
+[Event "endAparam" "commonKey"]
+
+
+Bob events:
+
+[InPriv 1 TTP Bob False "kXBob_ECScalar5"]
+
+[Key "Nonce" "kN_Nonce46",Assign False "vCurve" "x2a8648ce3d030101",Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811"]
+
+[InPubl False "f17",Calc False "f18" "Decrypt" ["f17","kXBob_ECScalar5"],Calc False "f19" "mFirstHalf" ["f18"],Calc False "f20" "mSecondHalf" ["f18"],Calc False "f21" "Concat" ["f19", "kN_Nonce46"],Calc False "f22" "Encrypt" ["f21","f20"],OutPubl "f22"]
+
+[Event "endAparam" "f21"]

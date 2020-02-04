@@ -1,0 +1,53 @@
+theory NS1
+begin
+
+builtins:
+    asymmetric-encryption
+    symmetric-encryption
+    diffie-hellman
+
+rule Register_AliPk:
+    [ Fr(~kXAli_ECScalar4) ]
+    -->
+    [ !Ltk($Ali, ~kXAli_ECScalar4), !Pk($Ali, pk(~kXAli_ECScalar4)) ]
+
+rule Get_AliPk:
+    [ !Pk(Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    Out(Alipubkey)
+
+rule Register_BobPk:
+    [ Fr(~kXBob_ECScalar5) ]
+    -->
+    [ !Ltk($Bob, ~kXBob_ECScalar5), !Pk($Bob, pk(~kXBob_ECScalar5)) ]
+
+rule Get_BobPk:
+    [ !Pk(Ali, pk(kXBob_ECScalar5)) ]
+    -->
+    Out(Bobpubkey)
+
+rule InPublAlif9::
+    [ In(f9), !Pk($Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    [ Ali(f9) ]
+
+rule GenKeyAli_kN_Nonce24::
+    [ Fr(~kN_Nonce24), !Pk($Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    [ Ali(kN_Nonce24) ]
+
+rule AssignAli_vCurve::
+    [ !Pk($Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    [ Ali(vCurve) ]
+
+rule AssignAli_vBasePoint::
+    [ !Pk($Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    [ Ali(vBasePoint) ]
+
+rule InPublAlif13::
+    [ In(f13), !Pk($Ali, pk(kXAli_ECScalar4)) ]
+    -->
+    [ Ali(f13) ]
+

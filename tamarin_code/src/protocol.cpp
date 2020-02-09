@@ -68,196 +68,36 @@ std::vector<std::vector<std::string>> SplitString(const std::string &curr_str) {
     return currCommand;
 }
 
-void Protocol::ReadHeader(std::ifstream &tamatinIn) {
-    std::string curr_str;
-    while (curr_str != "TTP events:") {
-        std::getline(tamatinIn, curr_str);
+// Rule
+void Rule::SetToString() {
+    if (agent == "TTP") {
+        this->ruleCharString = "TTP_Step_" + std::to_string(ruleNumber) + "(";
+    } else if (agent == "Ali") {
+        this->ruleCharString = "Ali_Step_" + std::to_string(ruleNumber) + "(";
+    } else if (agent == "Bob") {
+        this->ruleCharString = "Bob_Step_" + std::to_string(ruleNumber) + "(";
     }
-    std::cout << curr_str << std::endl;
+    for (const auto &elem: this->ruleCharSet) {
+        this->ruleCharString += (elem + ", ");
+    }
+    this->ruleCharString = this->ruleCharString.substr(0, this->ruleCharString.size() - 2);
+    this->ruleCharString += ")";
 }
 
-void Protocol::WriteHeader(std::ofstream &tamatinOut) {
-    tamatinOut << "theory NS1" << std::endl;
-    tamatinOut << "begin" << std::endl << std::endl;
-    tamatinOut << "builtins:" << std::endl;
-    tamatinOut << "    asymmetric-encryption" << std::endl;
-    tamatinOut << "    symmetric-encryption" << std::endl;
-    tamatinOut << "    diffie-hellman" << std::endl << std::endl;
+void Rule::WriteLetPart(std::ofstream &tamatinOut) {
+    tamatinOut << "    let" << std::endl;
+    for (const auto &it: letPart) {
+        tamatinOut << "        " << it.first << " = "
+        << it.second << std::endl;
+    }
+    tamatinOut << "    in" << std::endl;
 }
 
-void Protocol::WriteExpressionTTP(std::ofstream &tamatinOut) {
-    std::string key_str1 = "    [ Fr(~";
-    std::string key_str2 = ") ]";
-    std::string str_ltk1 = "    [ !Ltk($Ali, ~";
-    std::string str_ltk2 = "), !Pk($Ali, pk(~";
-    std::string str_ltk3 = ")) ]";
-    std::string str_ltk_1 = "    [ !Ltk($Bob, ~";
-    std::string str_ltk_2 = "), !Pk($Bob, pk(~";
-    // Ali
-    if (longKeys.private_key_agent_Ali.size() > 0) {
-        int len_str = longKeys.private_key_agent_Ali.size() - 1;
-        longKeys.private_key_agent_Ali = longKeys.private_key_agent_Ali.substr(1, len_str - 1);
-        std::string fresh_Ali = key_str1 + longKeys.private_key_agent_Ali + key_str2;
-        std::string next_state_Ali = str_ltk1 + longKeys.private_key_agent_Ali
-        + str_ltk2 + longKeys.private_key_agent_Ali + str_ltk3;
-        
-        tamatinOut << "rule Register_AliPk:" << std::endl;
-        tamatinOut << fresh_Ali << std::endl;
-        tamatinOut << "    -->" << std::endl;
-        tamatinOut << next_state_Ali << std::endl << std::endl;
-    }
-    if (longKeys.public_key_agent_Ali.size() > 0) {
-        std::string ali_str_pk1 = "    [ !Pk(Ali, pk(";
-        std::string ali_str_pk2 = ")) ]";
-        std::string ali_rule_str = ali_str_pk1 + longKeys.private_key_agent_Ali + ali_str_pk2;
-        tamatinOut << "rule Get_AliPk:" << std::endl;
-        tamatinOut << ali_rule_str << std::endl;
-        tamatinOut << "    -->" << std::endl;
-        tamatinOut << "    Out(Alipubkey)" << std::endl << std::endl;
-    }
-    // Bob
-    if (longKeys.private_key_agent_Bob.size() > 0) {
-        int len_str = longKeys.private_key_agent_Bob.size() - 1;
-        longKeys.private_key_agent_Bob = longKeys.private_key_agent_Bob.substr(1, len_str - 1);
-        std::string fresh_Bob = key_str1 + longKeys.private_key_agent_Bob + key_str2;
-        std::string next_state_Bob = str_ltk_1 + longKeys.private_key_agent_Bob
-        + str_ltk_2 + longKeys.private_key_agent_Bob + str_ltk3;
-    
-        tamatinOut << "rule Register_BobPk:" << std::endl;
-        tamatinOut << fresh_Bob << std::endl;
-        tamatinOut << "    -->" << std::endl;
-        tamatinOut << next_state_Bob << std::endl << std::endl;
-    }
-    if (longKeys.public_key_agent_Bob.size() > 0) {
-        std::string ali_str_pk1 = "    [ !Pk(Ali, pk(";
-        std::string ali_str_pk2 = ")) ]";
-        std::string ali_rule_str = ali_str_pk1 + longKeys.private_key_agent_Bob + ali_str_pk2;
-        tamatinOut << "rule Get_BobPk:" << std::endl;
-        tamatinOut << ali_rule_str << std::endl;
-        tamatinOut << "    -->" << std::endl;
-        tamatinOut << "    Out(Bobpubkey)" << std::endl << std::endl;
-    }
-}
-
-Protocol::Protocol(const std::string &inputFile, const std::string &outputFile) {
-    std::ifstream tamatinIn(inputFile);
-    std::ofstream tamatinOut(outputFile);
-    ReadHeader(tamatinIn);
-    WriteHeader(tamatinOut);
-    std::string curr_str;
-    // TTP events:
-    std::getline(tamatinIn, curr_str);
-    while (curr_str != "Ali events:") {
-        if (curr_str.size() > 1) {
-            ExecuteExpressionTTP(curr_str, tamatinOut);
-        }
-        std::getline(tamatinIn, curr_str);
-    }
-    WriteExpressionTTP(tamatinOut);
-    // Ali events:
-    std::getline(tamatinIn, curr_str);
-    while (curr_str != "Bob events:") {
-        if (curr_str.size() > 1) {
-            ExecuteExpressionAgent(curr_str, tamatinOut, "Ali");
-        }
-        std::getline(tamatinIn, curr_str);
-    }
-    
-}
-
-// TTP
-void Protocol::ExecuteExpressionTTP(const std::string &curr_str, std::ofstream &tamatinOut) {
-    std::vector<std::vector<std::string>> currCommand;
-    currCommand = SplitString(curr_str);
-    for (int id = 0; id < currCommand.size(); ++id) {
-        if (currCommand[id][0] == "Key") {
-            ProcessKeyTTP(currCommand[id], tamatinOut);
-        } else if (currCommand[id][0] == "OutPriv") {
-            ProcessOutPrivTTP(currCommand[id], tamatinOut);
-        } else if (currCommand[id][0] == "Assign") {
-            ProcessAssignTTP(currCommand[id], tamatinOut);
-        } else if (currCommand[id][0] == "Calc") {
-            ProcessCalcTTP(currCommand[id], tamatinOut);
-        } else if (currCommand[id][0] == "OutPubl") {
-            ProcessOutPublTTP(currCommand[id], tamatinOut);
-        }
-    }
-}
-
-void Protocol::ProcessKeyTTP(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut) {
-    longKeys.private_keys.insert(currCommand[2]);
-    return;
-}
-
-void Protocol::ProcessOutPrivTTP(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut) {
-    if (currCommand[3] == "Ali") {
-        auto it = longKeys.private_keys.find(currCommand[4]);
-        if (it != longKeys.private_keys.end()) {
-            longKeys.private_key_agent_Ali = currCommand[4];
-        }
-    } else if (currCommand[3] == "Bob") {
-        auto it = longKeys.private_keys.find(currCommand[4]);
-        if (it != longKeys.private_keys.end()) {
-            longKeys.private_key_agent_Bob = currCommand[4];
-        }
-    }
-    return;
-}
-
-void Protocol::ProcessAssignTTP(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut) {
-    Variable var;
-    var.name = currCommand[2];
-    var.connect_operation = "Assign";
-    std::vector<std::string> source_vec;
-    source_vec.push_back(currCommand[3]);
-    var.source_operation = source_vec;
-    auto it = variables.find(var.name);
-    if (it == variables.end()) {
-        variables[var.name] = var;
-    }
-    return;
-}
-
-void Protocol::ProcessCalcTTP(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut) {
-    Variable var;
-    var.name = currCommand[2];
-    auto it = variables.find(var.name);
-    if (it == variables.end()) {
-        var.connect_operation = "Calc";
-        std::vector<std::string> source_vec;
-        for (int i = 3; i < currCommand.size(); ++i) {
-            var.source_operation.push_back(currCommand[i]);
-        }
-        variables[var.name] = var;
-    }
-    return;
-}
-
-void Protocol::ProcessOutPublTTP(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut) {
-    auto it = variables.find(currCommand[1]);
-    if (it != variables.end()) {
-        if (it->second.source_operation[0] == "\"ECMult\"") {
-            std::string pr_key_Ali = longKeys.private_key_agent_Ali;
-            auto itAli = std::find(it->second.source_operation.begin(), it->second.source_operation.end(), pr_key_Ali);
-            std::string pr_key_Bob = longKeys.private_key_agent_Bob;
-            auto itBob = std::find(it->second.source_operation.begin(), it->second.source_operation.end(), pr_key_Bob);
-            if (itAli != it->second.source_operation.end()) {
-                longKeys.public_key_agent_Ali = it->first;
-            }
-            if (itBob != it->second.source_operation.end()) {
-                longKeys.public_key_agent_Bob = it->first;
-            }
-        }
-    }
-}
-
-// Agent
-
-void Protocol::WriteRule(std::ofstream &tamatinOut,
-                         const std::string &name, 
-                         const std::vector<std::string> &leftPart,
-                         const std::vector<std::string> &rightPart) {
+void Rule::WriteRule(std::ofstream &tamatinOut) {
     tamatinOut << "rule " << name << ":" << std::endl;
+    if (letPart.size() > 0) {
+        WriteLetPart(tamatinOut);
+    }
     tamatinOut << "    [ ";
     if (leftPart.size() > 0) {
         for (int i = 0; i < leftPart.size() - 1; ++i) {
@@ -266,7 +106,8 @@ void Protocol::WriteRule(std::ofstream &tamatinOut,
         tamatinOut << leftPart[leftPart.size() - 1];
     }
     tamatinOut << " ]" << std::endl;
-    tamatinOut << "    -->" << std::endl;
+    tamatinOut << "    --[" << name + "_Fact" + "('" + std::to_string(ruleNumber) + "')"
+    << "]->" << std::endl;
     tamatinOut << "    [ ";
     if (rightPart.size() > 0) {
         for (int i = 0; i < rightPart.size() - 1; ++i) {
@@ -277,6 +118,468 @@ void Protocol::WriteRule(std::ofstream &tamatinOut,
     tamatinOut << " ]" << std::endl << std::endl;
 }
 
+// Protocol
+void Protocol::ReadHeader(std::ifstream &tamatinIn) {
+    std::string curr_str;
+    while (curr_str != "TTP events:") {
+        std::getline(tamatinIn, curr_str);
+    }
+    std::cout << curr_str << std::endl;
+}
+
+void Protocol::WriteHeader(std::ofstream &tamatinOut) {
+    tamatinOut << "theory NS_DEBUG" << std::endl;
+    tamatinOut << "begin" << std::endl << std::endl;
+    tamatinOut << "builtins: asymmetric-encryption" << std::endl << std::endl;
+    //tamatinOut << "    asymmetric-encryption" << std::endl;
+    //tamatinOut << "    symmetric-encryption" << std::endl;
+    //tamatinOut << "    diffie-hellman" << std::endl << std::endl;
+    tamatinOut << "functions:" << std::endl;
+    tamatinOut << "    ECMult/3," << std::endl;
+    tamatinOut << "    Encrypt/2," << std::endl;
+    tamatinOut << "    Decrypt/2" << std::endl << std::endl;
+    tamatinOut << "equations:" << std::endl;
+    tamatinOut << "    Decrypt(Encrypt(mess, ECMult(vCurve, vBasePoint, key)), key) = mess"
+    << std::endl << std::endl;
+}
+
+void Protocol::WriteInLetPartOfRule(Rule &rule) {
+    for (const auto &elem: rule.ruleCharSet) {
+        if (rule.agent == "TTP") {
+            auto it = TTP_variables.find(elem);
+            if ((it != TTP_variables.end()) && (it->second.size() > 0)) {
+                rule.letPart[it->first] = it->second;
+            }
+        } else if (rule.agent == "Ali") {
+            auto it = Ali_variables.find(elem);
+            if ((it != Ali_variables.end()) && (it->second.size() > 0)) {
+                rule.letPart[it->first] = it->second;
+            }
+        } else if (rule.agent == "Bob") {
+            auto it = Bob_variables.find(elem);
+            if ((it != Bob_variables.end()) && (it->second.size() > 0)) {
+                rule.letPart[it->first] = it->second;
+            }
+        }
+    }
+}
+
+Protocol::Protocol(const std::string &inputFile, const std::string &outputFile) {
+    std::ifstream tamatinIn(inputFile);
+    std::ofstream tamatinOut(outputFile);
+    ReadHeader(tamatinIn);
+    WriteHeader(tamatinOut);
+    std::string curr_str;
+    int curr_rule = 0;
+    // TTP events:
+    std::getline(tamatinIn, curr_str);
+    while (curr_str != "Ali events:") {
+        if (curr_str.size() > 1) {
+            ExecuteExpression(curr_str, tamatinOut, "TTP", curr_rule);
+        }
+        std::getline(tamatinIn, curr_str);
+    }
+    curr_rule = 0;
+    // Ali events:
+    
+    while (curr_str != "Bob events:") {
+        if (curr_str.size() > 1) {
+            ExecuteExpression(curr_str, tamatinOut, "Ali", curr_rule);
+        }
+        std::getline(tamatinIn, curr_str);
+    }
+    curr_rule = 0;
+    
+    // Bob events:
+    while (std::getline(tamatinIn, curr_str)) {
+        if (curr_str.size() > 1) {
+            ExecuteExpression(curr_str, tamatinOut, "Bob", curr_rule);
+        }
+    }
+    curr_rule = 0;
+    
+    tamatinOut << "end" << std::endl;
+}
+
+void Protocol::ProcessKey(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    Rule rule;
+    keys.insert(currCommand[2].substr(1, currCommand[2].size() - 2));
+    std::string recKey = "~" + currCommand[2].substr(1, currCommand[2].size() - 2);
+    std::string fresh_str = "Fr(" + recKey + ")";
+    rule.ruleNumber = curr_rule;
+    if (agent == "TTP") {
+        rule.name = "TTP_Step_" + std::to_string(curr_rule);
+        rule.agent = "TTP";
+        if (curr_rule > 0) {
+            rule.ruleCharSet = TTP_rules[curr_rule - 1].ruleCharSet;
+            rule.leftPart.push_back(TTP_rules[curr_rule - 1].ruleCharString);
+        }
+        rule.ruleCharSet.insert(recKey);
+        rule.SetToString();
+        rule.leftPart.push_back(fresh_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        TTP_rules.push_back(rule);
+    } else if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        if (curr_rule > 0) {
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+        }
+        rule.ruleCharSet.insert(recKey);
+        rule.SetToString();
+        rule.leftPart.push_back(fresh_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "Bob") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        if (curr_rule > 0) {
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+        }
+        rule.ruleCharSet.insert(recKey);
+        rule.SetToString();
+        rule.leftPart.push_back(fresh_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+void Protocol::ProcessOutPriv(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    Rule rule;
+    std::string privMess = currCommand[4].substr(1, currCommand[4].size() - 2);
+    if (keys.find(privMess) != keys.end()) {
+        privMess = "~" + privMess;
+    }
+    std::string toAgent = "$" + currCommand[3];
+    std::string ltk_str = "!Ltk(" + toAgent + ", " + privMess + ")";
+    rule.ruleNumber = curr_rule;
+    if (agent == "TTP") {
+        rule.name = "TTP_Step_" + std::to_string(curr_rule);
+        rule.agent = "TTP";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(TTP_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = TTP_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(privMess);
+        rule.ruleCharSet.insert(toAgent);
+        rule.SetToString();
+        rule.rightPart.push_back(ltk_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        TTP_rules.push_back(rule);
+    } else if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(privMess);
+        rule.ruleCharSet.insert(toAgent);
+        rule.SetToString();
+        rule.rightPart.push_back(ltk_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "Bob") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(privMess);
+        rule.ruleCharSet.insert(toAgent);
+        rule.SetToString();
+        rule.rightPart.push_back(ltk_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+//Calc False "f8" "ECMult" ["vCurve","vBasePoint","kXAli_ECScalar4"]
+
+void Protocol::ProcessCalc(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    Rule rule;
+    std::string calc_str;
+    std::string res_str = currCommand[2].substr(1, currCommand[2].size() - 2);
+    std::string op_str = currCommand[3].substr(1, currCommand[3].size() - 2);
+    if (agent == "TTP") {
+        rule.name = "TTP_Step_" + std::to_string(curr_rule);
+        rule.agent = "TTP";
+        calc_str = op_str + "(";
+        for (int i = 5; currCommand[i] != "]"; ++i) {
+            std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
+            if (keys.find(currArg) != keys.end()) {
+                currArg = "~" + currArg;
+            } else if (TTP_variables.find(currArg) == TTP_variables.end()) {
+                currArg = "\'" + currArg + "\'";
+            }
+            calc_str += (currArg + ", ");
+        }
+        calc_str = calc_str.substr(0, calc_str.size() - 2);
+        calc_str += ")";
+        rule.ruleNumber = curr_rule;
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(TTP_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = TTP_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(res_str);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        TTP_variables[res_str] = calc_str;
+        WriteInLetPartOfRule(rule);
+        TTP_rules.push_back(rule);
+    } else if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        calc_str = op_str + "(";
+        for (int i = 5; currCommand[i] != "]"; ++i) {
+            std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
+            if (keys.find(currArg) != keys.end()) {
+                currArg = "~" + currArg;
+            } else if (Ali_variables.find(currArg) == Ali_variables.end()) {
+                currArg = "\'" + currArg + "\'";
+            }
+            calc_str += (currArg + ", ");
+        }
+        calc_str = calc_str.substr(0, calc_str.size() - 2);
+        calc_str += ")";
+        rule.ruleNumber = curr_rule;
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(res_str);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        Ali_variables[res_str] = calc_str;
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "TTP") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        calc_str = op_str + "(";
+        for (int i = 5; currCommand[i] != "]"; ++i) {
+            std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
+            if (keys.find(currArg) != keys.end()) {
+                currArg = "~" + currArg;
+            } else if (Bob_variables.find(currArg) == Bob_variables.end()) {
+                currArg = "\'" + currArg + "\'";
+            }
+            calc_str += (currArg + ", ");
+        }
+        calc_str = calc_str.substr(0, calc_str.size() - 2);
+        calc_str += ")";
+        rule.ruleNumber = curr_rule;
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(res_str);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        Bob_variables[res_str] = calc_str;
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+void Protocol::ProcessOutPubl(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    Rule rule;
+    std::string publMess = currCommand[1].substr(1, currCommand[1].size() - 2);
+    std::string outMess = "Out(" + publMess + ")";
+    rule.ruleNumber = curr_rule;
+    if (agent == "TTP") {
+        rule.name = "TTP_Step_" + std::to_string(curr_rule);
+        rule.agent = "TTP";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(TTP_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = TTP_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.rightPart.push_back(outMess);
+        rule.ruleCharSet.insert(publMess);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        TTP_rules.push_back(rule);
+    } else if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.rightPart.push_back(outMess);
+        rule.ruleCharSet.insert(publMess);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "Bob") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.rightPart.push_back(outMess);
+        rule.ruleCharSet.insert(publMess);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+void Protocol::ProcessInPriv(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    keys.insert(currCommand[5].substr(1, currCommand[5].size() - 2));
+    Rule rule;
+    std::string privMess = currCommand[5].substr(1, currCommand[5].size() - 2);
+    if (keys.find(privMess) != keys.end()) {
+        privMess = "~" + privMess;
+    }
+    std::string fresh_str = "Fr(" + privMess + ")";
+    std::string toAgent = "$" + currCommand[3];
+    std::string ltk_str = "!Ltk(" + toAgent + ", " + privMess + ")";
+    rule.ruleNumber = curr_rule;
+    if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(privMess);
+        rule.ruleCharSet.insert(toAgent);
+        rule.SetToString();
+        rule.leftPart.push_back(fresh_str);
+        rule.rightPart.push_back(ltk_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "Bob") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+        }
+        rule.ruleCharSet.insert(privMess);
+        rule.ruleCharSet.insert(toAgent);
+        rule.SetToString();
+        rule.leftPart.push_back(fresh_str);
+        rule.rightPart.push_back(ltk_str);
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+// InPubl False "f9"
+void Protocol::ProcessInPubl(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent, int &curr_rule) {
+    Rule rule;
+    std::string publMess = currCommand[2].substr(1, currCommand[2].size() - 2);
+    std::string inMess = "In(" + publMess + ")";
+    rule.ruleNumber = curr_rule;
+    if (agent == "Ali") {
+        rule.name = "Ali_Step_" + std::to_string(curr_rule);
+        rule.agent = "Ali";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Ali_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Ali_rules[curr_rule - 1].ruleCharSet;
+        }
+        Ali_variables[publMess] = "";
+        rule.leftPart.push_back(inMess);
+        rule.ruleCharSet.insert(publMess);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Ali_rules.push_back(rule);
+    } else if (agent == "Bob") {
+        rule.name = "Bob_Step_" + std::to_string(curr_rule);
+        rule.agent = "Bob";
+        if (curr_rule > 0) {
+            rule.leftPart.push_back(Bob_rules[curr_rule - 1].ruleCharString);
+            rule.ruleCharSet = Bob_rules[curr_rule - 1].ruleCharSet;
+        }
+        Bob_variables[publMess] = "";
+        rule.leftPart.push_back(inMess);
+        rule.ruleCharSet.insert(publMess);
+        rule.SetToString();
+        rule.rightPart.push_back(rule.ruleCharString);
+        WriteInLetPartOfRule(rule);
+        Bob_rules.push_back(rule);
+    } else {
+        return;
+    }
+    rule.WriteRule(tamatinOut);
+    ++curr_rule;
+}
+
+/*
+if (agent == "TTP") {
+    auto it = TTP_variables.find(currArg);
+    if (it != TTP_variables.end()) {
+        letPart[it->first] = ;
+    }
+}
+*/
+// ExecuteExpression
+void Protocol::ExecuteExpression(const std::string &curr_str, std::ofstream &tamatinOut, const std::string &agent, int &curr_rule) {
+    std::vector<std::vector<std::string>> currCommand;
+    currCommand = SplitString(curr_str);
+    for (int id = 0; id < currCommand.size(); ++id) {
+        if (currCommand[id][0] == "Key") {
+            ProcessKey(currCommand[id], tamatinOut, agent, curr_rule);
+        } else if (currCommand[id][0] == "OutPriv") {
+            ProcessOutPriv(currCommand[id], tamatinOut, agent, curr_rule);
+        } else if (currCommand[id][0] == "Calc") {
+            ProcessCalc(currCommand[id], tamatinOut, agent, curr_rule);
+        } else if (currCommand[id][0] == "OutPubl") {
+            ProcessOutPubl(currCommand[id], tamatinOut, agent, curr_rule);
+        } else if (currCommand[id][0] == "InPriv") {
+            ProcessInPriv(currCommand[id], tamatinOut, agent, curr_rule);
+        } else if (currCommand[id][0] == "InPubl") {
+            ProcessInPubl(currCommand[id], tamatinOut, agent, curr_rule);
+        }
+        /*
+        else if (currCommand[id][0] == "Assign") {
+            ProcessAssign(currCommand[id], tamatinOut, curr_rule);
+        } else if (currCommand[id][0] == "OutPubl") {
+            ProcessOutPubl(currCommand[id], tamatinOut, curr_rule);
+        }
+        */
+    }
+}
+
+/*
 void Protocol::ExecuteExpressionAgent(const std::string &curr_str, std::ofstream &tamatinOut, std::string agent) {
     std::vector<std::vector<std::string>> currCommand;
     currCommand = SplitString(curr_str);
@@ -370,9 +673,9 @@ void Protocol::ProcessKeyAgent(const std::vector<std::string> &currCommand, std:
     rightPart.push_back(Agent_comm_str);
     WriteRule(tamatinOut, rule_name, leftPart, rightPart);
 }
-/*
+
 void Protocol::ProcessCalcAgent(const std::vector<std::string> &currCommand, std::ofstream &tamatinOut, std::string agent) {
-    std::string recKey = currCommand[2].substr(1, currCommand[2].size() - 2);
+    std::string resVar = currCommand[2].substr(1, currCommand[2].size() - 2);
     std::string rule_name;
     std::vector<std::string> leftPart;
     std::string Agent_str;
@@ -393,18 +696,9 @@ void Protocol::ProcessCalcAgent(const std::vector<std::string> &currCommand, std
                 rightExpr += ", ";
             }
         }
-        if (currCommand[3]) {
+        if (currCommand[3] == "Encrypt") {
 
         }
     }
 }
 */
-// Print
-void Protocol::Print() {
-    std::cout << "longKeys:" << std::endl;
-    std::cout << longKeys.private_key_agent_Ali << std::endl;
-    std::cout << longKeys.private_key_agent_Bob << std::endl;
-    std::cout << longKeys.public_key_agent_Ali << std::endl;
-    std::cout << longKeys.public_key_agent_Bob << std::endl;
-    std::cout << "______________________" << std::endl;
-}

@@ -1,0 +1,436 @@
+/* This program was automatically generated automatically by CMN.1-to-Tamarin converter */
+
+theory NS1
+begin
+
+//==================================================================================================
+// Build-in theories
+//==================================================================================================
+
+builtins:
+  asymmetric-encryption,
+  symmetric-encryption,
+  diffie-hellman
+
+//==================================================================================================
+// Functions to model encryption/decryption
+//==================================================================================================
+
+functions:
+  LengthBE1/1,
+  LengthBE2/1,
+  LengthBE3/1,
+  LengthBE4/1,
+  LengthDER/1,
+
+  mFirstHalf/1,
+  TakeFirst12/1,
+  TakeFirst16/1,
+  TakeFirst32/1,
+
+  SplitElem1By2/1,
+  Split1_32_1/1,
+
+  PadWith064/1,
+
+  Padx00_16/1,
+  Unpadx00_16/1,
+
+  Add1/1,
+  Sub1/1,
+
+  Add16/1,
+  Sub16/1,
+
+  EncodeDERBits/1,
+  DecodeDERBits/1,
+
+  EncodeDERInt/1,
+  DecodeDERInt/1,
+
+  Xor/2,
+
+  HashSHA256/1,
+
+  Mod/2,
+  ModAdd/3,
+  ModSub0/3,
+  ModSub1/3,
+  ModMult/3,
+  ModDiv0/3,
+  ModDiv1/3,
+  ModExp/3,
+  ModInv/2,
+
+  ECAdd/3,
+  ECMult/3,
+
+  EncryptCBC_AES192/3,
+  DecryptCBC_AES192/3,
+
+  EncryptAEAD_GCM_AES128/4,
+  DecryptAEAD_GCM_AES128/4
+
+equations:
+  Sub1(Add1(a0)) = a0,
+  Sub16(Add16(a0)) = a0,
+  DecodeDERBits(EncodeDERBits(a0)) = a0,
+  DecodeDERInt(EncodeDERInt(a0)) = a0,
+  ModSub0(ModAdd(a0, a1, a2), a1, a2) = a0,
+  ModSub1(a0, ModAdd(a0, a1, a2), a2) = a1,
+  ModDiv0(ModMult(a0, a1, a2), a1, a2) = a0,
+  ModDiv1(a0, ModMult(a0, a1, a2), a2) = a1,
+  DecryptCBC_AES192(EncryptCBC_AES192(a0, a1, a2), a1, a2) = a0,
+  DecryptAEAD_GCM_AES128(EncryptAEAD_GCM_AES128(a0, a1, a2, a3), a1, a2, a3) = a0
+
+//==================================================================================================
+// Secure channel rules:
+// an adversary can neither modify no learn messages being sent over a secure channel
+//==================================================================================================
+
+rule SecureChannel_Out:
+    [ SecureOut($Channel, msg) ]
+  --[ SecureOut($Channel, msg) ]->
+    [ !SecureTransmission($Channel, msg) ]
+
+rule SecureChannel_In:
+    [ !SecureTransmission($Channel, msg) ]
+  --[ SecureIn($Channel, msg) ]->
+    [ SecureIn($Channel, msg) ]
+
+//==================================================================================================
+// Standard restrictions
+//==================================================================================================
+
+restriction Equality:
+  "All x y #i. Eq(x, y)@i ==> x = y"
+
+
+
+//==================================================================================================
+// NS1 TTP (0)
+//==================================================================================================
+
+rule NS1_TTP_0:
+  let
+      tid = ~tid /* new thread */
+  in
+    [ Fr(~tid)
+    ]
+  --[ Role('TTP')
+    , Step('0')
+    , Begin()
+    ]->
+    [ NS1_TTP_Step_0(tid)
+    ]
+
+//==================================================================================================
+// NS1 TTP (1)
+//==================================================================================================
+
+rule NS1_TTP_1:
+  let
+      kX_Bob_ECScalar7 = ~kX_Bob_ECScalar7
+      kX_Ali_ECScalar4 = ~kX_Ali_ECScalar4
+      vCurveOID = 'x2a8648ce3d030101'
+      vCurveBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+      f8 = ECMult(vCurveOID, vCurveBasePoint, kX_Bob_ECScalar7)
+      f9 = <kX_Ali_ECScalar4, f8>
+  in
+    [ NS1_TTP_Step_0(tid)
+    , Fr(~kX_Bob_ECScalar7)
+    , Fr(~kX_Ali_ECScalar4)
+    ]
+  --[ Role('TTP')
+    , Step('1')
+    , Send(f9)
+    ]->
+    [ NS1_TTP_Step_1(tid, kX_Bob_ECScalar7, kX_Ali_ECScalar4, vCurveOID, vCurveBasePoint)
+    , SecureOut($TTP_Ali, f9)
+    ]
+
+//==================================================================================================
+// NS1 TTP (2)
+//==================================================================================================
+
+rule NS1_TTP_2:
+  let
+      f10 = ECMult(vCurveOID, vCurveBasePoint, kX_Ali_ECScalar4)
+      f11 = <kX_Bob_ECScalar7, f10>
+  in
+    [ NS1_TTP_Step_1(tid, kX_Bob_ECScalar7, kX_Ali_ECScalar4, vCurveOID, vCurveBasePoint)
+    ]
+  --[ Role('TTP')
+    , Step('2')
+    , End()
+    , Send(f11)
+    ]->
+    [ NS1_TTP_Step_2(tid)
+    , SecureOut($TTP_Bob, f11)
+    ]
+
+//==================================================================================================
+// NS1 Ali (0)
+//==================================================================================================
+
+rule NS1_Ali_0:
+  let
+      tid = ~tid /* new thread */
+  in
+    [ Fr(~tid)
+    ]
+  --[ Role('Ali')
+    , Step('0')
+    , Begin()
+    ]->
+    [ NS1_Ali_Step_0(tid)
+    ]
+
+//==================================================================================================
+// NS1 Ali (1)
+//==================================================================================================
+
+rule NS1_Ali_1:
+  let
+      f10 = <kX_Ali_ECScalar5, f9> /* <-> */
+  in
+    [ NS1_Ali_Step_0(tid)
+    , SecureIn($TTP_Ali, f10)
+    ]
+  --[ Role('Ali')
+    , Step('1')
+    , Recv(f10)
+    ]->
+    [ NS1_Ali_Step_1(tid, kX_Ali_ECScalar5, f9)
+    ]
+
+//==================================================================================================
+// NS1 Ali (2)
+//==================================================================================================
+
+rule NS1_Ali_2:
+  let
+      kN_Nonce23 = ~kN_Nonce23
+      kIV2_Plain22 = ~kIV2_Plain22
+      kSymmetrKey2_Plain14 = ~kSymmetrKey2_Plain14
+      kEphemerKey2_ECScalar11 = ~kEphemerKey2_ECScalar11
+      vCurveOID = 'x2a8648ce3d030101'
+      vCurveBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+      f24 = ECMult(vCurveOID, vCurveBasePoint, kX_Ali_ECScalar5)
+      f25 = <kN_Nonce23, f24>
+      f26 = EncryptCBC_AES192(f25, kIV2_Plain22, kSymmetrKey2_Plain14)
+      f16 = ECMult(vCurveOID, f9, kEphemerKey2_ECScalar11)
+      f17 = mFirstHalf(f16)
+      vDHSecret2 = f17
+      vCurveN = 'xffffffffffffffffffffffff99def836146bc9b1b4d22831'
+      f21 = ModMult(kSymmetrKey2_Plain14, vDHSecret2, vCurveN)
+      f12 = ECMult(vCurveOID, vCurveBasePoint, kEphemerKey2_ECScalar11)
+      vProtectedSymmetrKey2 = f21
+      f27 = <f12, vProtectedSymmetrKey2, kIV2_Plain22, f26>
+  in
+    [ NS1_Ali_Step_1(tid, kX_Ali_ECScalar5, f9)
+    , Fr(~kN_Nonce23)
+    , Fr(~kIV2_Plain22)
+    , Fr(~kSymmetrKey2_Plain14)
+    , Fr(~kEphemerKey2_ECScalar11)
+    ]
+  --[ Role('Ali')
+    , Step('2')
+    , Send(f27)
+    ]->
+    [ NS1_Ali_Step_2(tid, kX_Ali_ECScalar5, f9, kN_Nonce23, vCurveOID, vCurveBasePoint, vCurveN)
+    , Out(f27)
+    ]
+
+//==================================================================================================
+// NS1 Ali (3)
+//==================================================================================================
+
+rule NS1_Ali_3:
+  let
+      vProtectedSymmetrKey3 = f37 /* <-> */
+      f42 = <f30, vProtectedSymmetrKey3, kIV3_Plain38, f41> /* <-> */
+      f34 = ECMult(vCurveOID, f30, kX_Ali_ECScalar5)
+      f35 = mFirstHalf(f34)
+      vDHSecret3 = f35
+      f43 = ModDiv0(f37, vDHSecret3, vCurveN)
+      kSymmetrKey3_Plain32 = f43
+      f44 = DecryptCBC_AES192(f41, kIV3_Plain38, kSymmetrKey3_Plain32)
+      f40 = f44
+  in
+    [ NS1_Ali_Step_2(tid, kX_Ali_ECScalar5, f9, kN_Nonce23, vCurveOID, vCurveBasePoint, vCurveN)
+    , In(f42)
+    ]
+  --[ Role('Ali')
+    , Step('3')
+    , Recv(f42)
+    ]->
+    [ NS1_Ali_Step_3(tid, f9, kN_Nonce23, vCurveOID, vCurveBasePoint, vCurveN, f40)
+    ]
+
+//==================================================================================================
+// NS1 Ali (4)
+//==================================================================================================
+
+rule NS1_Ali_4:
+  let
+      f40 = </*=*/ kN_Nonce23, kN_Nonce39, /*=*/ 'ascii_Bobbbbbbbbbbbbbb'> /* <-> */
+      kIV4_Plain54 = ~kIV4_Plain54
+      kSymmetrKey4_Plain48 = ~kSymmetrKey4_Plain48
+      kEphemerKey4_ECScalar45 = ~kEphemerKey4_ECScalar45
+      f55 = EncryptCBC_AES192(kN_Nonce39, kIV4_Plain54, kSymmetrKey4_Plain48)
+      f50 = ECMult(vCurveOID, f9, kEphemerKey4_ECScalar45)
+      f51 = mFirstHalf(f50)
+      vDHSecret4 = f51
+      f53 = ModMult(kSymmetrKey4_Plain48, vDHSecret4, vCurveN)
+      f46 = ECMult(vCurveOID, vCurveBasePoint, kEphemerKey4_ECScalar45)
+      vProtectedSymmetrKey4 = f53
+      f56 = <f46, vProtectedSymmetrKey4, kIV4_Plain54, f55>
+  in
+    [ NS1_Ali_Step_3(tid, f9, kN_Nonce23, vCurveOID, vCurveBasePoint, vCurveN, f40)
+    , Fr(~kIV4_Plain54)
+    , Fr(~kSymmetrKey4_Plain48)
+    , Fr(~kEphemerKey4_ECScalar45)
+    ]
+  --[ Role('Ali')
+    , Step('4')
+    , End()
+    , Send(f56)
+    ]->
+    [ NS1_Ali_Step_4(tid)
+    , Out(f56)
+    ]
+
+//==================================================================================================
+// NS1 Bob (0)
+//==================================================================================================
+
+rule NS1_Bob_0:
+  let
+      tid = ~tid /* new thread */
+  in
+    [ Fr(~tid)
+    ]
+  --[ Role('Bob')
+    , Step('0')
+    , Begin()
+    ]->
+    [ NS1_Bob_Step_0(tid)
+    ]
+
+//==================================================================================================
+// NS1 Bob (1)
+//==================================================================================================
+
+rule NS1_Bob_1:
+  let
+      f10 = <kX_Bob_ECScalar5, f9> /* <-> */
+  in
+    [ NS1_Bob_Step_0(tid)
+    , SecureIn($TTP_Bob, f10)
+    ]
+  --[ Role('Bob')
+    , Step('1')
+    , Recv(f10)
+    ]->
+    [ NS1_Bob_Step_1(tid, kX_Bob_ECScalar5, f9)
+    ]
+
+//==================================================================================================
+// NS1 Bob (2)
+//==================================================================================================
+
+rule NS1_Bob_2:
+  let
+      vProtectedSymmetrKey2 = f22 /* <-> */
+      f27 = <f13, vProtectedSymmetrKey2, kIV2_Plain23, f26> /* <-> */
+      vCurveOID = 'x2a8648ce3d030101'
+      f17 = ECMult(vCurveOID, f13, kX_Bob_ECScalar5)
+      f18 = mFirstHalf(f17)
+      vDHSecret2 = f18
+      vCurveN = 'xffffffffffffffffffffffff99def836146bc9b1b4d22831'
+      f28 = ModDiv0(f22, vDHSecret2, vCurveN)
+      kSymmetrKey2_Plain15 = f28
+      f29 = DecryptCBC_AES192(f26, kIV2_Plain23, kSymmetrKey2_Plain15)
+      f25 = f29
+  in
+    [ NS1_Bob_Step_1(tid, kX_Bob_ECScalar5, f9)
+    , In(f27)
+    ]
+  --[ Role('Bob')
+    , Step('2')
+    , Recv(f27)
+    ]->
+    [ NS1_Bob_Step_2(tid, kX_Bob_ECScalar5, f9, vCurveOID, vCurveN, f25)
+    ]
+
+//==================================================================================================
+// NS1 Bob (3)
+//==================================================================================================
+
+rule NS1_Bob_3:
+  let
+      f25 = <kN_Nonce24, /*=*/ f9> /* <-> */
+      kN_Nonce40 = ~kN_Nonce40
+      kIV3_Plain39 = ~kIV3_Plain39
+      kSymmetrKey3_Plain33 = ~kSymmetrKey3_Plain33
+      kEphemerKey3_ECScalar30 = ~kEphemerKey3_ECScalar30
+      f35 = ECMult(vCurveOID, f9, kEphemerKey3_ECScalar30)
+      f36 = mFirstHalf(f35)
+      vDHSecret3 = f36
+      f38 = ModMult(kSymmetrKey3_Plain33, vDHSecret3, vCurveN)
+      vCurveBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+      f31 = ECMult(vCurveOID, vCurveBasePoint, kEphemerKey3_ECScalar30)
+      f41 = <kN_Nonce24, kN_Nonce40, 'ascii_Bobbbbbbbbbbbbbb'>
+      f42 = EncryptCBC_AES192(f41, kIV3_Plain39, kSymmetrKey3_Plain33)
+      vProtectedSymmetrKey3 = f38
+      f43 = <f31, vProtectedSymmetrKey3, kIV3_Plain39, f42>
+  in
+    [ NS1_Bob_Step_2(tid, kX_Bob_ECScalar5, f9, vCurveOID, vCurveN, f25)
+    , Fr(~kN_Nonce40)
+    , Fr(~kIV3_Plain39)
+    , Fr(~kSymmetrKey3_Plain33)
+    , Fr(~kEphemerKey3_ECScalar30)
+    ]
+  --[ Role('Bob')
+    , Step('3')
+    , Send(f43)
+    ]->
+    [ NS1_Bob_Step_3(tid, kX_Bob_ECScalar5, vCurveOID, vCurveN, kN_Nonce40)
+    , Out(f43)
+    ]
+
+//==================================================================================================
+// NS1 Bob (4)
+//==================================================================================================
+
+rule NS1_Bob_4:
+  let
+      vProtectedSymmetrKey4 = f52 /* <-> */
+      f55 = <f45, vProtectedSymmetrKey4, kIV4_Plain53, f54> /* <-> */
+      f49 = ECMult(vCurveOID, f45, kX_Bob_ECScalar5)
+      f50 = mFirstHalf(f49)
+      vDHSecret4 = f50
+      f56 = ModDiv0(f52, vDHSecret4, vCurveN)
+      kSymmetrKey4_Plain47 = f56
+  in
+    [ NS1_Bob_Step_3(tid, kX_Bob_ECScalar5, vCurveOID, vCurveN, kN_Nonce40)
+    , In(f55)
+    ]
+  --[ Role('Bob')
+    , Step('4')
+    , End()
+    , Recv(f55)
+    , Eq(f54, EncryptCBC_AES192(kN_Nonce40, kIV4_Plain53, kSymmetrKey4_Plain47))
+    ]->
+    [ NS1_Bob_Step_4(tid)
+    ]
+
+
+lemma reachable:
+  exists-trace
+    "Ex #i_TTP #i_Ali #i_Bob .
+       Role('TTP')@i_TTP & End()@i_TTP &
+       Role('Ali')@i_Ali & End()@i_Ali &
+       Role('Bob')@i_Bob & End()@i_Bob"
+end

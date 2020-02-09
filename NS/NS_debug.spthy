@@ -1,53 +1,133 @@
-theory NS1
+theory NS_DEBUG
 begin
 
-builtins:
-    asymmetric-encryption
-    symmetric-encryption
-    diffie-hellman
+builtins: asymmetric-encryption
 
-rule Register_AliPk:
+functions:
+    ECMult/3,
+    Encrypt/2,
+    Decrypt/2
+
+equations:
+    Decrypt(Encrypt(mess, ECMult(vCurve, vBasePoint, key)), key) = mess
+
+rule TTP_Step_0:
     [ Fr(~kXAli_ECScalar4) ]
-    -->
-    [ !Ltk($Ali, ~kXAli_ECScalar4), !Pk($Ali, pk(~kXAli_ECScalar4)) ]
+    --[TTP_Step_0_Fact('0')]->
+    [ TTP_Step_0(~kXAli_ECScalar4) ]
 
-rule Get_AliPk:
-    [ !Pk(Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    Out(Alipubkey)
+rule TTP_Step_1:
+    [ TTP_Step_0(~kXAli_ECScalar4) ]
+    --[TTP_Step_1_Fact('1')]->
+    [ !Ltk($Ali, ~kXAli_ECScalar4), TTP_Step_1($Ali, ~kXAli_ECScalar4) ]
 
-rule Register_BobPk:
+rule TTP_Step_2:
+    [ TTP_Step_1($Ali, ~kXAli_ECScalar4), Fr(~kXBob_ECScalar5) ]
+    --[TTP_Step_2_Fact('2')]->
+    [ TTP_Step_2($Ali, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_3:
+    [ TTP_Step_2($Ali, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_3_Fact('3')]->
+    [ !Ltk($Bob, ~kXBob_ECScalar5), TTP_Step_3($Ali, $Bob, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_4:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+    in
+    [ TTP_Step_3($Ali, $Bob, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_4_Fact('4')]->
+    [ TTP_Step_4($Ali, $Bob, f8, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_5:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+    in
+    [ TTP_Step_4($Ali, $Bob, f8, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_5_Fact('5')]->
+    [ Out(f8), TTP_Step_5($Ali, $Bob, f8, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_6:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+        f9 = ECMult('vCurve', 'vBasePoint', ~kXBob_ECScalar5)
+    in
+    [ TTP_Step_5($Ali, $Bob, f8, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_6_Fact('6')]->
+    [ TTP_Step_6($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_7:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+        f9 = ECMult('vCurve', 'vBasePoint', ~kXBob_ECScalar5)
+    in
+    [ TTP_Step_6($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_7_Fact('7')]->
+    [ Out(f9), TTP_Step_7($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_8:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+        f9 = ECMult('vCurve', 'vBasePoint', ~kXBob_ECScalar5)
+    in
+    [ TTP_Step_7($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_8_Fact('8')]->
+    [ !Ltk($Ali, f9), TTP_Step_8($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_9:
+    let
+        f8 = ECMult('vCurve', 'vBasePoint', ~kXAli_ECScalar4)
+        f9 = ECMult('vCurve', 'vBasePoint', ~kXBob_ECScalar5)
+    in
+    [ TTP_Step_8($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    --[TTP_Step_9_Fact('9')]->
+    [ !Ltk($Bob, f8), TTP_Step_9($Ali, $Bob, f8, f9, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule Ali_Step_0:
+    [ Fr(~kXAli_ECScalar4) ]
+    --[Ali_Step_0_Fact('0')]->
+    [ !Ltk($Ali, ~kXAli_ECScalar4), Ali_Step_0($Ali, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_1:
+    [ Ali_Step_0($Ali, ~kXAli_ECScalar4), In(f9) ]
+    --[Ali_Step_1_Fact('1')]->
+    [ Ali_Step_1($Ali, f9, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_2:
+    [ Ali_Step_1($Ali, f9, ~kXAli_ECScalar4), Fr(~kN_Nonce24) ]
+    --[Ali_Step_2_Fact('2')]->
+    [ Ali_Step_2($Ali, f9, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_3:
+    let
+        f10 = Encrypt(~kN_Nonce24, f9)
+    in
+    [ Ali_Step_2($Ali, f9, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+    --[Ali_Step_3_Fact('3')]->
+    [ Ali_Step_3($Ali, f10, f9, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_4:
+    let
+        f10 = Encrypt(~kN_Nonce24, f9)
+    in
+    [ Ali_Step_3($Ali, f10, f9, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+    --[Ali_Step_4_Fact('4')]->
+    [ Out(f10), Ali_Step_4($Ali, f10, f9, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Bob_Step_0:
     [ Fr(~kXBob_ECScalar5) ]
-    -->
-    [ !Ltk($Bob, ~kXBob_ECScalar5), !Pk($Bob, pk(~kXBob_ECScalar5)) ]
+    --[Bob_Step_0_Fact('0')]->
+    [ !Ltk($Bob, ~kXBob_ECScalar5), Bob_Step_0($Bob, ~kXBob_ECScalar5) ]
 
-rule Get_BobPk:
-    [ !Pk(Ali, pk(kXBob_ECScalar5)) ]
-    -->
-    Out(Bobpubkey)
+rule Bob_Step_1:
+    [ Bob_Step_0($Bob, ~kXBob_ECScalar5), In(f17) ]
+    --[Bob_Step_1_Fact('1')]->
+    [ Bob_Step_1($Bob, f17, ~kXBob_ECScalar5) ]
 
-rule InPublAlif9::
-    [ In(f9), !Pk($Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    [ Ali(f9) ]
+lemma Bob_base_access:
+    exists-trace
+    " Ex #i.
+        Bob_Step_1_Fact('1') @ #i
+    "
 
-rule GenKeyAli_kN_Nonce24::
-    [ Fr(~kN_Nonce24), !Pk($Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    [ Ali(kN_Nonce24) ]
-
-rule AssignAli_vCurve::
-    [ !Pk($Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    [ Ali(vCurve) ]
-
-rule AssignAli_vBasePoint::
-    [ !Pk($Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    [ Ali(vBasePoint) ]
-
-rule InPublAlif13::
-    [ In(f13), !Pk($Ali, pk(kXAli_ECScalar4)) ]
-    -->
-    [ Ali(f13) ]
-
+end

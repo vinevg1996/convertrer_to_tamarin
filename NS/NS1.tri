@@ -1,0 +1,78 @@
+Constants:
+"x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811"
+"x2a8648ce3d030101"
+"xffffffffffffffffffffffff99def836146bc9b1b4d22831"
+
+Reversable functions:
+("EncryptAES192",[("DecryptAES192",0)],3)
+("ModMult",[("ModDiv0",0),("ModDiv1",1)],3)
+
+Unreversable functions:
+("ECMult",3)
+("LengthBE2",1)
+("mFirstHalf",1)
+
+Concatenation functions:
+("Concat",2)
+("Concat",4)
+
+Diffie-Hellmann functions:
+("ECMult",["vCurve","vBasePoint"])
+
+Private channels:
+([TTP,Ali],1)
+([TTP,Ali],2)
+([TTP,Bob],1)
+([TTP,Bob],2)
+
+
+TTP events:
+
+[Key "ECScalar" "kXAli_ECScalar4",OutPriv 1 TTP Ali "kXAli_ECScalar4"]
+
+[Key "ECScalar" "kXBob_ECScalar5",OutPriv 1 TTP Bob "kXBob_ECScalar5"]
+
+[Assign False "vCurve" "x2a8648ce3d030101",Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811",Calc False "f8" "ECMult" ["vCurve","vBasePoint","kXAli_ECScalar4"],OutPubl "f8"]
+
+[Calc False "f9" "ECMult" ["vCurve","vBasePoint","kXBob_ECScalar5"],OutPubl "f9"]
+
+[OutPriv 2 TTP Ali "f9"]
+
+[OutPriv 2 TTP Bob "f8"]
+
+
+Ali events:
+
+[InPriv 1 TTP Ali False "kXAli_ECScalar5"]
+
+[InPubl False "f9"]
+
+[Event "beginBparam" "f9"]
+
+[Key "Nonce" "kN_Nonce24",Key "Plain" "kIV4_Plain23",Key "Plain" "kSymmetrKey4_Plain14",Key "ECScalar" "kEphemerKey4_ECScalar10",Assign False "vCurve" "x2a8648ce3d030101",Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811",Calc False "f25" "ECMult" ["vCurve","vBasePoint","kXAli_ECScalar5"],Calc False "f26" "Concat" ["kN_Nonce24","f25"],Calc False "f27" "EncryptAES192" ["f26","kIV4_Plain23","kSymmetrKey4_Plain14"],Calc False "f15" "ECMult" ["vCurve","f9","kEphemerKey4_ECScalar10"],Calc False "f16" "mFirstHalf" ["f15"],Assign False "vCurveN" "xffffffffffffffffffffffff99def836146bc9b1b4d22831",Calc False "f20" "ModMult" ["kSymmetrKey4_Plain14","f16","vCurveN"],Calc False "f21" "LengthBE2" ["f20"],Calc False "f22" "Concat" ["f21","f20"],Calc False "f11" "ECMult" ["vCurve","vBasePoint","kEphemerKey4_ECScalar10"],Calc False "f12" "LengthBE2" ["f11"],Calc False "f13" "Concat" ["f12","f11"],Calc False "f28" "Concat" ["f13","f22","kIV4_Plain23","f27"],OutPubl "f28"]
+
+[InPubl False "f45",RevConcat [("f33",False),("f40",False),("kIV5_Plain41",False),("f44",False)] "f45",RevConcat [("f39",False),("f38",False)] "f40",Calc True "f39" "LengthBE2" ["f38"],RevConcat [("f32",False),("f31",False)] "f33",Calc True "f32" "LengthBE2" ["f31"],Calc False "f46" "ECMult" ["vCurve","f31","kXAli_ECScalar5"],Calc False "f47" "mFirstHalf" ["f46"],Calc False "f48" "ModDiv0" ["f38","f47","vCurveN"],Assign False "kSymmetrKey5_Plain34" "f48",Calc False "f49" "DecryptAES192" ["f44","kIV5_Plain41","kSymmetrKey5_Plain34"],Assign False "f43" "f49",RevConcat [("kN_Nonce24",True),("kN_Nonce42",False)] "f43"]
+
+[Key "Plain" "kIV6_Plain61",Key "Plain" "kSymmetrKey6_Plain54",Key "ECScalar" "kEphemerKey6_ECScalar50",Calc False "f62" "EncryptAES192" ["kN_Nonce42","kIV6_Plain61","kSymmetrKey6_Plain54"],Calc False "f55" "ECMult" ["vCurve","f9","kEphemerKey6_ECScalar50"],Calc False "f56" "mFirstHalf" ["f55"],Calc False "f58" "ModMult" ["kSymmetrKey6_Plain54","f56","vCurveN"],Calc False "f59" "LengthBE2" ["f58"],Calc False "f60" "Concat" ["f59","f58"],Calc False "f51" "ECMult" ["vCurve","vBasePoint","kEphemerKey6_ECScalar50"],Calc False "f52" "LengthBE2" ["f51"],Calc False "f53" "Concat" ["f52","f51"],Calc False "f63" "Concat" ["f53","f60","kIV6_Plain61","f62"],OutPubl "f63"]
+
+[InPriv 2 TTP Ali True "f9"]
+
+[Event "endAparam" "f25"]
+
+
+Bob events:
+
+[InPriv 1 TTP Bob False "kXBob_ECScalar5"]
+
+[InPubl False "f29",RevConcat [("f12",False),("f22",False),("kIV2_Plain23",False),("f28",False)] "f29",RevConcat [("f21",False),("f20",False)] "f22",Calc True "f21" "LengthBE2" ["f20"],RevConcat [("f11",False),("f10",False)] "f12",Calc True "f11" "LengthBE2" ["f10"],Assign False "vCurve" "x2a8648ce3d030101",Calc False "f30" "ECMult" ["vCurve","f10","kXBob_ECScalar5"],Calc False "f31" "mFirstHalf" ["f30"],Assign False "vCurveN" "xffffffffffffffffffffffff99def836146bc9b1b4d22831",Calc False "f32" "ModDiv0" ["f20","f31","vCurveN"],Assign False "kSymmetrKey2_Plain13" "f32",Calc False "f33" "DecryptAES192" ["f28","kIV2_Plain23","kSymmetrKey2_Plain13"],Assign False "f27" "f33",RevConcat [("kN_Nonce24",False),("f26",False)] "f27"]
+
+[Event "beginAparam" "f26"]
+
+[Key "Nonce" "kN_Nonce46",Key "Plain" "kIV4_Plain45",Key "Plain" "kSymmetrKey4_Plain38",Key "ECScalar" "kEphemerKey4_ECScalar34",Calc False "f47" "Concat" ["kN_Nonce24","kN_Nonce46"],Calc False "f48" "EncryptAES192" ["f47","kIV4_Plain45","kSymmetrKey4_Plain38"],Calc False "f39" "ECMult" ["vCurve","f26","kEphemerKey4_ECScalar34"],Calc False "f40" "mFirstHalf" ["f39"],Calc False "f42" "ModMult" ["kSymmetrKey4_Plain38","f40","vCurveN"],Calc False "f43" "LengthBE2" ["f42"],Calc False "f44" "Concat" ["f43","f42"],Assign False "vBasePoint" "x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811",Calc False "f35" "ECMult" ["vCurve","vBasePoint","kEphemerKey4_ECScalar34"],Calc False "f36" "LengthBE2" ["f35"],Calc False "f37" "Concat" ["f36","f35"],Calc False "f49" "Concat" ["f37","f44","kIV4_Plain45","f48"],OutPubl "f49"]
+
+[InPubl False "f63",RevConcat [("f53",False),("f60",False),("kIV5_Plain61",False),("f62",False)] "f63",RevConcat [("f59",False),("f58",False)] "f60",Calc True "f59" "LengthBE2" ["f58"],RevConcat [("f52",False),("f51",False)] "f53",Calc True "f52" "LengthBE2" ["f51"],Calc False "f64" "ECMult" ["vCurve","f51","kXBob_ECScalar5"],Calc False "f65" "mFirstHalf" ["f64"],Calc False "f66" "ModDiv0" ["f58","f65","vCurveN"],Assign False "kSymmetrKey5_Plain54" "f66",Calc True "f62" "EncryptAES192" ["kN_Nonce46","kIV5_Plain61","kSymmetrKey5_Plain54"]]
+
+[InPriv 2 TTP Bob True "f26"]
+
+[Calc False "f14" "ECMult" ["vCurve","vBasePoint","kXBob_ECScalar5"],Event "endBparam" "f14"]
+

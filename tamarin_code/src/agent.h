@@ -23,6 +23,7 @@ public:
 class Agent {
     std::string agent_name;
     std::map<std::string, std::string> variables;
+    std::vector<std::string> var_order;
     std::vector<Rule> rulesStack;
     std::set<std::string> keys;
 

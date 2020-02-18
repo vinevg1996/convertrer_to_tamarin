@@ -41,6 +41,12 @@ Protocol::Protocol(const std::string &inputFile,
     std::string curr_str;
     int curr_rule = 0;
     // TTP events:
+    std::getline(tamatinIn, curr_str);
+    //Agent TTP("TTP");
+    while (curr_str != "Ali events:") {
+        std::getline(tamatinIn, curr_str);
+    }
+    curr_rule = 0;
     // Ali events:
     std::getline(tamatinIn, curr_str);
     Agent Ali("Ali");
@@ -59,13 +65,15 @@ Protocol::Protocol(const std::string &inputFile,
         //std::getline(tamatinIn, curr_str);
     }
     curr_rule = 0;
+    tamatinOut << std::endl << "//lemmas:" 
+    << std::endl << std::endl << std::endl;
     tamatinOut << "end" << std::endl;
 }
 
 // Agent
 Agent::Agent(const std::string &agent_name) 
         : agent_name(agent_name) {}
-
+/*
 void Agent::ExecuteExpression(const std::string &curr_str, std::ofstream &tamatinOut, int &curr_rule) {
     std::vector<std::vector<std::string>> currCommand;
     currCommand = SplitString(curr_str);
@@ -81,18 +89,34 @@ void Agent::ExecuteExpression(const std::string &curr_str, std::ofstream &tamati
         } else if (currCommand[id][0] == "OutPubl") {
             ProcessOutPubl(currCommand[id], tamatinOut, curr_rule);
         }
-        /* else if (currCommand[id][0] == "OutPriv") {
-            ProcessOutPriv(currCommand[id], tamatinOut, curr_rule);
+    }
+}
+*/
+void Agent::ExecuteExpression(const std::string &curr_str, std::ofstream &tamatinOut, int &curr_rule) {
+    std::vector<std::vector<std::string>> currCommand;
+    currCommand = SplitString(curr_str);
+    for (int id = 0; id < currCommand.size(); ++id) {
+        if (currCommand[id][0] == "Key") {
+            ProcessKey(currCommand[id], tamatinOut, curr_rule);
+        } else if (currCommand[id][0] == "InPriv") {
+            ProcessInPriv(currCommand[id], tamatinOut, curr_rule);
+        } else if (currCommand[id][0] == "Calc") {
+            ProcessCalc(currCommand[id], tamatinOut, curr_rule);
+        } else if (currCommand[id][0] == "InPubl") {
+            ProcessInPubl(currCommand[id], tamatinOut, curr_rule);
+        } else if (currCommand[id][0] == "OutPubl") {
+            ProcessOutPubl(currCommand[id], tamatinOut, curr_rule);
         }
-        */
     }
 }
 
 void Agent::WriteInLetPartOfRule(Rule &rule) {
-    for (const auto &elem: rule.ruleCharSet) {
-        auto it = variables.find(elem);
-        if ((it != variables.end()) && (it->second.size() > 0)) {
-            rule.letPart[it->first] = it->second;
+    for (int i = 0; i < var_order.size(); ++i) {
+        auto it1 = rule.ruleCharSet.find(var_order[i]);
+        auto it = variables.find(var_order[i]);
+        if ((it1 != rule.ruleCharSet.end()) && (it->second.size() > 0)) {
+            std::string new_string = *it1 + " = " + it->second;
+            rule.letPart.push_back(new_string);
         }
     }
 }
@@ -129,8 +153,6 @@ void Agent::ProcessInPriv(const std::vector<std::string> &currCommand, std::ofst
         privMess = "~" + privMess;
     }
     std::string fresh_str = "Fr(" + privMess + ")";
-    //std::string toAgent = "$" + currCommand[3];
-    //std::string ltk_str = "!Ltk(" + toAgent + ", " + privMess + ")";
     rule.ruleNumber = curr_rule;
     rule.name = agent_name + "_Step_" + std::to_string(curr_rule);
     rule.agent = agent_name;
@@ -158,21 +180,42 @@ void Agent::ProcessCalc(const std::vector<std::string> &currCommand, std::ofstre
     std::string calc_str;
     std::string res_str = currCommand[2].substr(1, currCommand[2].size() - 2);
     std::string op_str = currCommand[3].substr(1, currCommand[3].size() - 2);
-
     rule.name = agent_name + "_Step_" + std::to_string(curr_rule);
     rule.agent = agent_name;
-    calc_str = op_str + "(";
-    for (int i = 5; currCommand[i] != "]"; ++i) {
-        std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
-        if (keys.find(currArg) != keys.end()) {
-            currArg = "~" + currArg;
-        } else if (variables.find(currArg) == variables.end()) {
-            currArg = "\'" + currArg + "\'";
+    if (op_str == "Concat") {
+        calc_str = "<";
+        for (int i = 5; currCommand[i] != "]"; ++i) {
+            std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
+            if (keys.find(currArg) != keys.end()) {
+                currArg = "~" + currArg;
+            } else if (variables.find(currArg) == variables.end()) {
+                currArg = "\'" + currArg + "\'";
+            }
+            calc_str += (currArg + ", ");
         }
-        calc_str += (currArg + ", ");
+        calc_str = calc_str.substr(0, calc_str.size() - 2);
+        calc_str += ">";
+    } else {
+        if (op_str == "mFirstHalf") {
+            calc_str = "fst";
+        } else if (op_str == "mSecondHalf") {
+            calc_str = "snd";
+        } else {
+            calc_str = op_str;
+        }
+        calc_str += "(";
+        for (int i = 5; currCommand[i] != "]"; ++i) {
+            std::string currArg = currCommand[i].substr(1, currCommand[i].size() - 2);
+            if (keys.find(currArg) != keys.end()) {
+                currArg = "~" + currArg;
+            } else if (variables.find(currArg) == variables.end()) {
+                currArg = "\'" + currArg + "\'";
+            }
+            calc_str += (currArg + ", ");
+        }
+        calc_str = calc_str.substr(0, calc_str.size() - 2);
+        calc_str += ")";
     }
-    calc_str = calc_str.substr(0, calc_str.size() - 2);
-    calc_str += ")";
     rule.ruleNumber = curr_rule;
     if (curr_rule > 0) {
         rule.leftPart.push_back(rulesStack[curr_rule - 1].ruleCharString);
@@ -183,6 +226,7 @@ void Agent::ProcessCalc(const std::vector<std::string> &currCommand, std::ofstre
     rule.actionPart = res_str;
     rule.rightPart.push_back(rule.ruleCharString);
     variables[res_str] = calc_str;
+    var_order.push_back(res_str);
     WriteInLetPartOfRule(rule);
     rulesStack.push_back(rule);
 
@@ -202,6 +246,7 @@ void Agent::ProcessInPubl(const std::vector<std::string> &currCommand, std::ofst
         rule.ruleCharSet = rulesStack[curr_rule - 1].ruleCharSet;
     }
     variables[publMess] = "";
+    var_order.push_back(publMess);
     rule.leftPart.push_back(inMess);
     rule.ruleCharSet.insert(publMess);
     rule.SetToString();

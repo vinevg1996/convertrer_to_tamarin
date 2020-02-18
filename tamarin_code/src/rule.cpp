@@ -88,9 +88,14 @@ void Rule::SetToString() {
 
 void Rule::WriteLetPart(std::ofstream &tamatinOut) {
     tamatinOut << "    let" << std::endl;
+    /*
     for (const auto &it: letPart) {
         tamatinOut << "        " << it.first << " = "
         << it.second << std::endl;
+    }
+    */
+    for (const auto &it: letPart) {
+        tamatinOut << "        " << it << std::endl;
     }
     tamatinOut << "    in" << std::endl;
     return;

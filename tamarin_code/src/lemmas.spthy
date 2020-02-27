@@ -1,0 +1,11 @@
+--[Ali_rule(commonKey)]->
+
+--[Bob_rule(commonKey)]->
+
+lemma Protocol_NS_access:
+    exists-trace
+    " Ex key #i #j #l.
+        Ali_rule(key) @ #i &
+        Bob_rule(key) @ #j &
+        K(key) @ #l
+    "

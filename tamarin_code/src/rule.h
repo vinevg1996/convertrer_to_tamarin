@@ -22,12 +22,13 @@ struct Rule {
     std::string ruleCharString;
     std::vector<std::string> leftPart;
     std::vector<std::string> rightPart;
-    std::string actionPart;
+    std::set<std::string> actionPart;
     //std::map<std::string, std::string> letPart;
     std::vector<std::string> letPart;
 
     void SetToString();
     void WriteLetPart(std::ofstream &tamatinOut);
+    void WriteEqPart(std::ofstream &tamatinOut);
     void WriteRule(std::ofstream &tamatinOut);
 };
 

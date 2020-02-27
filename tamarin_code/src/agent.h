@@ -14,6 +14,7 @@ class Protocol {
 
     void ReadHeader(std::ifstream &tamarinIn);
     void WriteHeader(std::ofstream &tamatinOut);
+    void CreateSecureChannels(std::ofstream &tamatinOut);
 
 public:
     Protocol(const std::string &inputFile, 
@@ -35,22 +36,28 @@ public:
     void WriteInLetPartOfRule(Rule &rule);
     void ProcessKey(const std::vector<std::string> &currCommand, 
                     std::ofstream &tamatinOut, 
-                    int &curr_rule);
-    void ProcessOutPriv(const std::vector<std::string> &currCommand, 
-                    std::ofstream &tamatinOut, 
-                    int &curr_rule);
-    void ProcessCalc(const std::vector<std::string> &currCommand, 
-                     std::ofstream &tamatinOut, 
-                     int &curr_rule);
-    void ProcessOutPubl(const std::vector<std::string> &currCommand, 
-                        std::ofstream &tamatinOut, 
-                        int &curr_rule);
+                    Rule &currRule);
     void ProcessInPriv(const std::vector<std::string> &currCommand, 
                        std::ofstream &tamatinOut, 
-                       int &curr_rule);
+                       Rule &currRule);
+    void ProcessOutPriv(const std::vector<std::string> &currCommand, 
+                        std::ofstream &tamatinOut, 
+                        Rule &currRule);
+    void ProcessCalc(const std::vector<std::string> &currCommand, 
+                     std::ofstream &tamatinOut, 
+                     Rule &currRule);
+    void ProcessAssign(const std::vector<std::string> &currCommand, 
+                       std::ofstream &tamatinOut, 
+                       Rule &currRule);
     void ProcessInPubl(const std::vector<std::string> &currCommand, 
-                       std::ofstream &tamatinOut,
-                       int &curr_rule);
+                       std::ofstream &tamatinOut, 
+                       Rule &currRule);
+    void ProcessOutPubl(const std::vector<std::string> &currCommand, 
+                        std::ofstream &tamatinOut, 
+                        Rule &currRule);
+    void ProcessRevConcat(const std::vector<std::string> &currCommand, 
+                          std::ofstream &tamatinOut, 
+                          Rule &currRule);
 };
 
 #endif

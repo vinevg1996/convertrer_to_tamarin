@@ -71,18 +71,20 @@ std::vector<std::vector<std::string>> SplitString(const std::string &curr_str) {
 
 // Rule
 void Rule::SetToString() {
-    if (agent == "TTP") {
-        this->ruleCharString = "TTP_Step_" + std::to_string(ruleNumber) + "(";
-    } else if (agent == "Ali") {
-        this->ruleCharString = "Ali_Step_" + std::to_string(ruleNumber) + "(";
-    } else if (agent == "Bob") {
-        this->ruleCharString = "Bob_Step_" + std::to_string(ruleNumber) + "(";
+    if (this->ruleCharSet.size() > 0) {
+        if (agent == "TTP") {
+            this->ruleCharString = "TTP_Step_" + std::to_string(ruleNumber) + "(";
+        } else if (agent == "Ali") {
+            this->ruleCharString = "Ali_Step_" + std::to_string(ruleNumber) + "(";
+        } else if (agent == "Bob") {
+            this->ruleCharString = "Bob_Step_" + std::to_string(ruleNumber) + "(";
+        }
+        for (const auto &elem: this->ruleCharSet) {
+            this->ruleCharString += (elem + ", ");
+        }
+        this->ruleCharString = this->ruleCharString.substr(0, this->ruleCharString.size() - 2);
+        this->ruleCharString += ")";
     }
-    for (const auto &elem: this->ruleCharSet) {
-        this->ruleCharString += (elem + ", ");
-    }
-    this->ruleCharString = this->ruleCharString.substr(0, this->ruleCharString.size() - 2);
-    this->ruleCharString += ")";
     return;
 }
 
@@ -101,6 +103,18 @@ void Rule::WriteLetPart(std::ofstream &tamatinOut) {
     return;
 }
 
+void Rule::WriteEqPart(std::ofstream &tamatinOut) {
+    tamatinOut << "    --[";
+    std::string actionStr;
+    for (const auto &it: actionPart) {
+        actionStr += it + ", ";
+    }
+    actionStr = actionStr.substr(0, actionStr.size() - 2);
+    tamatinOut << actionStr;
+    tamatinOut << "]->" << std::endl;
+    return;
+}
+
 void Rule::WriteRule(std::ofstream &tamatinOut) {
     tamatinOut << "rule " << name << ":" << std::endl;
     if (letPart.size() > 0) {
@@ -114,10 +128,11 @@ void Rule::WriteRule(std::ofstream &tamatinOut) {
         tamatinOut << leftPart[leftPart.size() - 1];
     }
     tamatinOut << " ]" << std::endl;
-    tamatinOut << "    --[" << name + "_Fact" + "(" + actionPart + ")"
-    << "]->" << std::endl;
-    //tamatinOut << "    --[h(" << actionPart << ")"
-    //<< "]->" << std::endl;
+    if (actionPart.size() > 0) {
+        WriteEqPart(tamatinOut);
+    } else {
+        tamatinOut << "    -->" << std::endl;
+    }
     tamatinOut << "    [ ";
     if (rightPart.size() > 0) {
         for (int i = 0; i < rightPart.size() - 1; ++i) {

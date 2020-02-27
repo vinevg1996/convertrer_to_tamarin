@@ -1,0 +1,164 @@
+theory NS_ATACK_DEBUG
+begin
+
+builtins: asymmetric-encryption,
+          hashing
+
+functions:
+    ECMult/3,
+    Encrypt/2,
+    Decrypt/2
+
+equations:
+    Decrypt(Encrypt(mess, ECMult(a, b, key)), key) = mess
+    
+rule ChanOut_S:
+    [ SecureOut($A, $B, x) ]
+    --[SecureOut($A, $B, x)]->
+    [ !SecureTransmission($A, $B, x) ]
+
+rule ChanIn_S:
+    [ !SecureTransmission($A, $B, x) ]
+    --[SecureIn($A, $B, x)]->
+    [ SecureIn($A, $B, x) ]
+
+rule TTP_Step_0:
+    [ Fr(~kXAli_ECScalar4) ]
+    -->
+    [ SecureOut($TTP, $Ali, ~kXAli_ECScalar4), TTP_Step_0(~kXAli_ECScalar4) ]
+
+rule TTP_Step_1:
+    [ TTP_Step_0(~kXAli_ECScalar4), Fr(~kXBob_ECScalar5) ]
+    -->
+    [ SecureOut($TTP, $Bob, ~kXBob_ECScalar5), TTP_Step_1(~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_2:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f8 = ECMult(vCurve, vBasePoint, ~kXAli_ECScalar4)
+    in
+    [ TTP_Step_1(~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    -->
+    [ Out(f8), TTP_Step_2(f8, vBasePoint, vCurve, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule TTP_Step_3:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f8 = ECMult(vCurve, vBasePoint, ~kXAli_ECScalar4)
+        f9 = ECMult(vCurve, vBasePoint, ~kXBob_ECScalar5)
+    in
+    [ TTP_Step_2(f8, vBasePoint, vCurve, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+    -->
+    [ Out(f9), TTP_Step_3(f8, f9, vBasePoint, vCurve, ~kXAli_ECScalar4, ~kXBob_ECScalar5) ]
+
+rule Ali_Step_0:
+    [ SecureIn($TTP, $Ali, ~kXAli_ECScalar4) ]
+    -->
+    [ Ali_Step_0(~kXAli_ECScalar4) ]
+
+rule Ali_Step_1:
+    [ Ali_Step_0(~kXAli_ECScalar4), In(f9) ]
+    -->
+    [ Ali_Step_1(f9, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_2:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f10 = ECMult(vCurve, vBasePoint, ~kXAli_ECScalar4)
+        f11 = <~kN_Nonce24, f10>
+        f12 = Encrypt(f11, f9)
+    in
+    [ Ali_Step_1(f9, ~kXAli_ECScalar4), Fr(~kN_Nonce24) ]
+    -->
+    [ Out(f12), Ali_Step_2(f10, f11, f12, f9, vBasePoint, vCurve, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_3:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f10 = ECMult(vCurve, vBasePoint, ~kXAli_ECScalar4)
+        f11 = <~kN_Nonce24, f10>
+        f12 = Encrypt(f11, f9)
+        f14 = Decrypt(f13, ~kXAli_ECScalar4)
+        f23 = fst(f14)
+        f15 = snd(f14)
+        f16 = Encrypt(f15, f9)
+    in
+    [ Ali_Step_2(f10, f11, f12, f9, vBasePoint, vCurve, ~kN_Nonce24, ~kXAli_ECScalar4), In(f13) ]
+    -->
+    [ Out(f16), Ali_Step_3(f10, f11, f12, f13, f14, f15, f16, f23, f9, vBasePoint, vCurve, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Ali_Step_4:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f10 = ECMult(vCurve, vBasePoint, ~kXAli_ECScalar4)
+        f11 = <~kN_Nonce24, f10>
+        f12 = Encrypt(f11, f9)
+        f14 = Decrypt(f13, ~kXAli_ECScalar4)
+        f23 = fst(f14)
+        f15 = snd(f14)
+        f16 = Encrypt(f15, f9)
+        commonKey = <~kN_Nonce24, f15>
+    in
+    [ Ali_Step_3(f10, f11, f12, f13, f14, f15, f16, f23, f9, vBasePoint, vCurve, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+    --[Ali_rule(commonKey)]->
+    [ Ali_Step_4(commonKey, f10, f11, f12, f13, f14, f15, f16, f23, f9, vBasePoint, vCurve, ~kN_Nonce24, ~kXAli_ECScalar4) ]
+
+rule Bob_Step_0:
+    [ SecureIn($TTP, $Bob, ~kXBob_ECScalar5) ]
+    -->
+    [ Bob_Step_0(~kXBob_ECScalar5) ]
+
+rule Bob_Step_1:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+    in
+    [ Bob_Step_0(~kXBob_ECScalar5), Fr(~kN_Nonce46) ]
+    -->
+    [ Bob_Step_1(vBasePoint, vCurve, ~kN_Nonce46, ~kXBob_ECScalar5) ]
+
+rule Bob_Step_2:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f18 = Decrypt(f17, ~kXBob_ECScalar5)
+        f19 = fst(f18)
+        f20 = snd(f18)
+        f21 = <f19, ~kN_Nonce46>
+        f22 = Encrypt(f21, f20)
+    in
+    [ Bob_Step_1(vBasePoint, vCurve, ~kN_Nonce46, ~kXBob_ECScalar5), In(f17) ]
+    -->
+    [ Out(f22), Bob_Step_2(f17, f18, f19, f20, f21, f22, vBasePoint, vCurve, ~kN_Nonce46, ~kXBob_ECScalar5) ]
+
+rule Bob_Step_3:
+    let
+        vCurve = 'x2a8648ce3d030101'
+        vBasePoint = 'x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff101207192b95ffc8da78631011ed6b24cdd573f977a11e794811'
+        f18 = Decrypt(f17, ~kXBob_ECScalar5)
+        f19 = fst(f18)
+        f20 = snd(f18)
+        f21 = <f19, ~kN_Nonce46>
+        f22 = Encrypt(f21, f20)
+        commonKey = <f19, ~kN_Nonce46>
+    in
+    [ Bob_Step_2(f17, f18, f19, f20, f21, f22, vBasePoint, vCurve, ~kN_Nonce46, ~kXBob_ECScalar5) ]
+    --[Bob_rule(commonKey)]->
+    [ Bob_Step_3(commonKey, f17, f18, f19, f20, f21, f22, vBasePoint, vCurve, ~kN_Nonce46, ~kXBob_ECScalar5) ]
+
+
+//lemmas:
+lemma Protocol_NS_access:
+    exists-trace
+    " Ex key #i #j #l.
+        Ali_rule(key) @ #i &
+        Bob_rule(key) @ #j &
+        K(key) @ #l
+    "
+
+end
